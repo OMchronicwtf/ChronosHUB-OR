@@ -190,9 +190,7 @@ local function FormatTimeLeft(ts)
     else return m .. "m remaining" end
 end
 
--- Shows the ban screen when executor is blocked
 local function ShowBanScreen(T, banMsg, execName)
-    -- Cleanup any previous instance
     for _, g in ipairs(CoreGui:GetChildren()) do
         if g.Name == "ChronosKeySystem" then g:Destroy() end
     end
@@ -205,7 +203,6 @@ local function ShowBanScreen(T, banMsg, execName)
     GUI.DisplayOrder = 999
     GUI.Parent = CoreGui
 
-    -- Dark background
     local BG = Instance.new("Frame")
     BG.Size = UDim2.fromScale(1, 1)
     BG.BackgroundColor3 = T.GradStart
@@ -222,9 +219,23 @@ local function ShowBanScreen(T, banMsg, execName)
     BGGrad.Rotation = T.GradAngle
     BGGrad.Parent = BG
 
-    -- Card
+    -- Build the list of redirect buttons from the config
+    local redirects = {}
+    if banMsg.Redirect and banMsg.RedirectText then
+        table.insert(redirects, {url = banMsg.Redirect, text = banMsg.RedirectText})
+    end
+    if banMsg.Redirect2 and banMsg.RedirectText2 then
+        table.insert(redirects, {url = banMsg.Redirect2, text = banMsg.RedirectText2})
+    end
+    if banMsg.Redirect3 and banMsg.RedirectText3 then
+        table.insert(redirects, {url = banMsg.Redirect3, text = banMsg.RedirectText3})
+    end
+
+    -- Calculate card height based on number of buttons
+    local cardHeight = 245 + (#redirects * 58)
+
     local Card = Instance.new("Frame")
-    Card.Size = UDim2.fromOffset(380, 340)
+    Card.Size = UDim2.fromOffset(380, cardHeight)
     Card.Position = UDim2.fromScale(0.5, 0.5)
     Card.AnchorPoint = Vector2.new(0.5, 0.5)
     Card.BackgroundColor3 = T.Card
@@ -240,7 +251,7 @@ local function ShowBanScreen(T, banMsg, execName)
     local function GetScale()
         local viewport = workspace.CurrentCamera.ViewportSize
         local scaleX = viewport.X / 420
-        local scaleY = viewport.Y / 380
+        local scaleY = viewport.Y / (cardHeight + 40)
         return math.min(scaleX, scaleY, 1)
     end
 
@@ -289,7 +300,7 @@ local function ShowBanScreen(T, banMsg, execName)
     BanTitle.ZIndex = 11
     BanTitle.Parent = Card
 
-    -- Subtitle
+    -- Subtitle with executor name
     local BanSub = Instance.new("TextLabel")
     BanSub.Size = UDim2.new(0.85, 0, 0, 20)
     BanSub.Position = UDim2.new(0.5, 0, 0, 152)
@@ -318,66 +329,70 @@ local function ShowBanScreen(T, banMsg, execName)
     BanBody.ZIndex = 11
     BanBody.Parent = Card
 
-    -- Redirect button
-    local RedirectBtn = Instance.new("TextButton")
-    RedirectBtn.Size = UDim2.new(0.85, 0, 0, 48)
-    RedirectBtn.Position = UDim2.new(0.5, 0, 0, 245)
-    RedirectBtn.AnchorPoint = Vector2.new(0.5, 0)
-    RedirectBtn.BackgroundColor3 = T.Error
-    RedirectBtn.BackgroundTransparency = 1
-    RedirectBtn.BorderSizePixel = 0
-    RedirectBtn.Text = ""
-    RedirectBtn.AutoButtonColor = false
-    RedirectBtn.ZIndex = 11
-    RedirectBtn.Parent = Card
-    MakeCorner(RedirectBtn, UDim.new(0, 16))
-    local RedirectStroke = MakeStroke(RedirectBtn, T.Error, 1, 1)
+    -- Create redirect buttons dynamically
+    local buttonRefs = {}
+    for i, redirect in ipairs(redirects) do
+        local yPos = 235 + ((i - 1) * 58)
 
-    local RedirectIcon = Instance.new("ImageLabel")
-    RedirectIcon.Size = UDim2.fromOffset(18, 18)
-    RedirectIcon.Position = UDim2.new(0.5, -70, 0.5, 0)
-    RedirectIcon.AnchorPoint = Vector2.new(0.5, 0.5)
-    RedirectIcon.BackgroundTransparency = 1
-    RedirectIcon.ImageColor3 = T.Text
-    RedirectIcon.ImageTransparency = 1
-    RedirectIcon.ZIndex = 12
-    RedirectIcon.Parent = RedirectBtn
-    ApplyIcon(RedirectIcon, "external-link")
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0.85, 0, 0, 48)
+        btn.Position = UDim2.new(0.5, 0, 0, yPos)
+        btn.AnchorPoint = Vector2.new(0.5, 0)
+        btn.BackgroundColor3 = i == 1 and T.Error or T.ButtonSec
+        btn.BackgroundTransparency = 1
+        btn.BorderSizePixel = 0
+        btn.Text = ""
+        btn.AutoButtonColor = false
+        btn.ZIndex = 11
+        btn.Parent = Card
+        MakeCorner(btn, UDim.new(0, 16))
+        local btnStroke = MakeStroke(btn, i == 1 and T.Error or T.TextMuted, 1, 1)
 
-    local RedirectText = Instance.new("TextLabel")
-    RedirectText.Size = UDim2.new(1, -40, 1, 0)
-    RedirectText.Position = UDim2.new(0.5, 5, 0, 0)
-    RedirectText.AnchorPoint = Vector2.new(0.5, 0)
-    RedirectText.BackgroundTransparency = 1
-    RedirectText.Text = banMsg.RedirectText or "Find a better executor"
-    RedirectText.TextColor3 = T.Text
-    RedirectText.Font = Enum.Font.GothamBold
-    RedirectText.TextSize = 14
-    RedirectText.TextTransparency = 1
-    RedirectText.ZIndex = 12
-    RedirectText.Parent = RedirectBtn
+        local btnIcon = Instance.new("ImageLabel")
+        btnIcon.Size = UDim2.fromOffset(18, 18)
+        btnIcon.Position = UDim2.new(0.5, -70, 0.5, 0)
+        btnIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+        btnIcon.BackgroundTransparency = 1
+        btnIcon.ImageColor3 = T.Text
+        btnIcon.ImageTransparency = 1
+        btnIcon.ZIndex = 12
+        btnIcon.Parent = btn
+        ApplyIcon(btnIcon, "external-link")
 
-    -- Button hover
-    RedirectBtn.MouseEnter:Connect(function()
-        Tween(RedirectBtn, {BackgroundTransparency = 0}, 0.2)
-        Tween(RedirectStroke, {Transparency = 0}, 0.2)
-    end)
-    RedirectBtn.MouseLeave:Connect(function()
-        Tween(RedirectBtn, {BackgroundTransparency = 0.15}, 0.2)
-        Tween(RedirectStroke, {Transparency = 0.5}, 0.2)
-    end)
+        local btnText = Instance.new("TextLabel")
+        btnText.Size = UDim2.new(1, -40, 1, 0)
+        btnText.Position = UDim2.new(0.5, 5, 0, 0)
+        btnText.AnchorPoint = Vector2.new(0.5, 0)
+        btnText.BackgroundTransparency = 1
+        btnText.Text = redirect.text
+        btnText.TextColor3 = T.Text
+        btnText.Font = Enum.Font.GothamBold
+        btnText.TextSize = 14
+        btnText.TextTransparency = 1
+        btnText.ZIndex = 12
+        btnText.Parent = btn
 
-    -- Button click: copy link and kick
-    RedirectBtn.MouseButton1Click:Connect(function()
-        local link = banMsg.Redirect or "https://whatexpsare.online/"
-        pcall(function()
-            if setclipboard then setclipboard(link) end
+        btn.MouseEnter:Connect(function()
+            Tween(btn, {BackgroundTransparency = 0}, 0.2)
+            Tween(btnStroke, {Transparency = 0}, 0.2)
         end)
-        task.wait(0.5)
-        pcall(function()
-            LocalPlayer:Kick("\n[ChronosHUB]\n" .. (banMsg.KickMessage or "Your executor is not supported.") .. "\n\nLink copied: " .. link)
+        btn.MouseLeave:Connect(function()
+            Tween(btn, {BackgroundTransparency = 0.15}, 0.2)
+            Tween(btnStroke, {Transparency = 0.5}, 0.2)
         end)
-    end)
+
+        btn.MouseButton1Click:Connect(function()
+            pcall(function()
+                if setclipboard then setclipboard(redirect.url) end
+            end)
+            task.wait(0.5)
+            pcall(function()
+                LocalPlayer:Kick("\n[ChronosHUB]\n" .. (banMsg.KickMessage or "Unsupported executor.") .. "\n\nLink copied: " .. redirect.url)
+            end)
+        end)
+
+        table.insert(buttonRefs, {btn = btn, stroke = btnStroke, icon = btnIcon, text = btnText})
+    end
 
     -- Entrance animation
     task.spawn(function()
@@ -403,12 +418,14 @@ local function ShowBanScreen(T, banMsg, execName)
 
         Tween(BanBody, {TextTransparency = 0}, 0.4)
 
-        task.wait(0.1)
-
-        Tween(RedirectBtn, {BackgroundTransparency = 0.15}, 0.5)
-        Tween(RedirectStroke, {Transparency = 0.5}, 0.5)
-        Tween(RedirectIcon, {ImageTransparency = 0}, 0.5)
-        Tween(RedirectText, {TextTransparency = 0}, 0.5)
+        -- Animate buttons one by one
+        for i, ref in ipairs(buttonRefs) do
+            task.wait(0.08)
+            Tween(ref.btn, {BackgroundTransparency = 0.15}, 0.5)
+            Tween(ref.stroke, {Transparency = 0.5}, 0.5)
+            Tween(ref.icon, {ImageTransparency = 0}, 0.5)
+            Tween(ref.text, {TextTransparency = 0}, 0.5)
+        end
     end)
 
     -- Pulsing warning icon
