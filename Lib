@@ -325,6 +325,7 @@ local function ShowBanScreen(T, banMsg, execName)
     BanBody.Font = Enum.Font.Gotham
     BanBody.TextSize = 12
     BanBody.TextWrapped = true
+    BanBody.RichText = true
     BanBody.TextTransparency = 1
     BanBody.ZIndex = 11
     BanBody.Parent = Card
